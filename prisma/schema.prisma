@@ -1,0 +1,283 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Finvest — PostgreSQL schema
+// Models: User, Business, InvestorProfile, ConnectionRequest, Message, SavedBusiness
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ENUMS
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum Role {
+  BUSINESS_OWNER
+  INVESTOR
+  BUYER
+  ADMIN
+}
+
+enum BusinessStage {
+  IDEA
+  STARTUP
+  GROWING
+  EXPANDING
+  MATURE
+}
+
+enum BusinessStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+/// Owner intent for the listing (investment vs exit vs partnership).
+enum ListingType {
+  INVESTMENT
+  ACQUISITION
+  PARTNERSHIP
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+/// Incoming connection intent (financial investment vs outright purchase).
+enum ConnectionRequestType {
+  INVESTMENT
+  BUYING
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+}
+
+enum Industry {
+  TECHNOLOGY
+  RETAIL
+  MANUFACTURING
+  FOOD_BEVERAGE
+  REAL_ESTATE
+  HEALTHCARE
+  EDUCATION
+  AGRICULTURE
+  TEXTILE
+  LOGISTICS
+  HOSPITALITY
+  FINANCE
+  CONSTRUCTION
+  MEDIA
+  OTHER
+}
+
+enum Province {
+  PUNJAB
+  SINDH
+  KPK
+  BALOCHISTAN
+  ISLAMABAD
+  AJK
+  GILGIT_BALTISTAN
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MODELS
+// ═══════════════════════════════════════════════════════════════════════════
+
+model User {
+  id        String    @id @default(uuid()) @db.Uuid
+  email     String    @unique @db.VarChar(255)
+  password  String
+  name      String    @db.VarChar(120)
+  role      Role      @default(INVESTOR)
+  phone     String?   @db.VarChar(30)
+  city      String?   @db.VarChar(80)
+  province  Province?
+  bio       String?   @db.Text
+  avatarUrl String?
+  verified  Boolean   @default(false)
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  businesses Business[]
+
+  investorProfile InvestorProfile?
+
+  sentConnections     ConnectionRequest[] @relation("SentConnections")
+  receivedConnections ConnectionRequest[] @relation("ReceivedConnections")
+
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+
+  savedBusinesses SavedBusiness[]
+
+  @@index([email])
+  @@index([role])
+  @@index([active])
+  @@index([province, city])
+  @@map("users")
+}
+
+model Business {
+  id          String        @id @default(uuid()) @db.Uuid
+  title       String        @db.VarChar(160)
+  description String        @db.Text
+  stage       BusinessStage
+  industry    Industry
+  city        String        @db.VarChar(80)
+  province    Province
+  listingType ListingType
+
+  askingPrice Decimal? @db.Decimal(15, 2)
+  revenue     Decimal? @db.Decimal(15, 2)
+  profit      Decimal? @db.Decimal(15, 2)
+
+  employees   Int?
+  established Int?
+  highlights  String[]
+  imageUrls   String[]
+
+  featured Boolean        @default(false)
+  status   BusinessStatus @default(ACTIVE)
+
+  ownerId String @db.Uuid
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  connections ConnectionRequest[]
+  savedBy     SavedBusiness[]
+
+  @@index([ownerId])
+  @@index([status])
+  @@index([stage, status])
+  @@index([industry, status])
+  @@index([listingType, status])
+  @@index([province, city, status])
+  @@index([featured, status])
+  @@index([createdAt(sort: Desc)])
+  @@map("businesses")
+}
+
+model InvestorProfile {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @unique @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  minInvestment Decimal? @db.Decimal(15, 2)
+  maxInvestment Decimal? @db.Decimal(15, 2)
+
+  preferredIndustries Industry[]
+  preferredProvinces  Province[]
+  investmentThesis    String?    @db.Text
+
+  portfolioSize Int?
+  accredited    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("investor_profiles")
+}
+
+model ConnectionRequest {
+  id         String @id @default(uuid()) @db.Uuid
+  senderId   String @db.Uuid
+  receiverId String @db.Uuid
+  businessId String @db.Uuid
+
+  type   ConnectionRequestType
+  status ConnectionStatus @default(PENDING)
+
+  message      String? @db.Text
+  responseNote String? @db.Text
+
+  sender   User     @relation("SentConnections", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User     @relation("ReceivedConnections", fields: [receiverId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([senderId, businessId, type])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([businessId])
+  @@index([status])
+  @@index([type])
+  @@index([type, status])
+  @@index([receiverId, status])
+  @@index([createdAt(sort: Desc)])
+  @@map("connection_requests")
+}
+
+model Message {
+  id         String @id @default(uuid()) @db.Uuid
+  senderId   String @db.Uuid
+  receiverId String @db.Uuid
+
+  content String  @db.Text
+  read    Boolean @default(false)
+
+  sender   User @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([senderId, receiverId])
+  @@index([receiverId, senderId])
+  @@index([receiverId, read])
+  @@index([createdAt(sort: Desc)])
+  @@map("messages")
+}
+
+model SavedBusiness {
+  id         String @id @default(uuid()) @db.Uuid
+  userId     String @db.Uuid
+  businessId String @db.Uuid
+  note       String? @db.VarChar(500)
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, businessId])
+  @@index([userId])
+  @@index([businessId])
+  @@index([createdAt(sort: Desc)])
+  @@map("saved_businesses")
+}
+
+/// Public careers page listings; admins create and toggle visibility.
+model JobPosting {
+  id             String         @id @default(uuid()) @db.Uuid
+  title          String         @db.VarChar(200)
+  department     String?        @db.VarChar(120)
+  location       String         @db.VarChar(200)
+  description    String         @db.Text
+  employmentType EmploymentType @default(FULL_TIME)
+  active         Boolean        @default(true)
+  applyEmail     String?        @db.VarChar(255)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([active, createdAt(sort: Desc)])
+  @@map("job_postings")
+}
