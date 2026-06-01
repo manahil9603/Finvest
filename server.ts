@@ -92,10 +92,12 @@ app.prepare().then(() => {
     })
 
     socket.on('disconnect', () => {
-      if (registeredUserId) {
-        onlineUsers.get(registeredUserId)?.delete(socket.id)
-        broadcastPresence(registeredUserId)
-      }
+      if (!registeredUserId) return
+      const sockets = onlineUsers.get(registeredUserId)
+      if (!sockets) return
+      sockets.delete(socket.id)
+      if (sockets.size === 0) onlineUsers.delete(registeredUserId)
+      broadcastPresence(registeredUserId)
     })
   })
 
@@ -103,6 +105,14 @@ app.prepare().then(() => {
     const displayHost = hostname === '0.0.0.0' ? 'localhost' : hostname
     console.log(`> Finvest ready on http://${displayHost}:${port}`)
     console.log('> Socket.io sharing the Next.js HTTP server')
+    if (process.env.DEBUG_MEMORY === 'true') {
+      setInterval(() => {
+        const m = process.memoryUsage()
+        console.log(
+          `[memory] rss=${Math.round(m.rss / 1024 / 1024)}MB heapUsed=${Math.round(m.heapUsed / 1024 / 1024)}MB onlineUsers=${onlineUsers.size}`,
+        )
+      }, 30_000).unref()
+    }
   })
 }).catch((error) => {
   console.error('Failed to start Finvest server', error)

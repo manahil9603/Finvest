@@ -1,0 +1,14 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Set secrets (DATABASE_URL, JWT_SECRET, etc.) in the Render dashboard.
+services:
+  - type: web
+    name: finvest
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node .server/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=460

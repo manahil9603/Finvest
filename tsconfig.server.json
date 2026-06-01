@@ -8,11 +8,9 @@
     "strict": false,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    },
-    "outDir": "./.server"
+    "outDir": "./.server",
+    "rootDir": "."
   },
-  "include": ["server.ts", "prisma/seed.ts", "src/lib/**/*"]
+  "include": ["server.ts"],
+  "exclude": ["node_modules", ".next"]
 }
