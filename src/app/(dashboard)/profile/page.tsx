@@ -10,6 +10,10 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   const [user, setUser] = useState<any>(null)
+  const [showDelete, setShowDelete] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -50,6 +54,31 @@ export default function ProfilePage() {
       setError('Network error')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDeleteAccount = async (e: FormEvent) => {
+    e.preventDefault()
+    setDeleteError('')
+    setDeleteLoading(true)
+    try {
+      const res = await fetch('/api/profile', {
+        method:  'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body:    JSON.stringify({ password: deletePassword }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setDeleteError(data.error ?? 'Could not delete account')
+        return
+      }
+      router.push(data.redirect ?? '/')
+      router.refresh()
+    } catch {
+      setDeleteError('Network error')
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -106,6 +135,63 @@ export default function ProfilePage() {
           {loading ? 'Saving…' : 'Save Changes'}
         </button>
       </form>
+
+      <section className="card p-6 mt-8 border-red-200">
+        <h2 className="font-bold text-red-700 mb-1">Delete account</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Permanently remove your account, listings, messages, and connections. This cannot be undone.
+        </p>
+
+        {!showDelete ? (
+          <button
+            type="button"
+            onClick={() => { setShowDelete(true); setDeleteError(''); setDeletePassword('') }}
+            className="px-4 py-2 rounded-lg text-sm font-semibold text-red-700 border border-red-300 hover:bg-red-50 transition-colors"
+          >
+            Delete my account
+          </button>
+        ) : (
+          <form onSubmit={handleDeleteAccount} className="space-y-4">
+            {deleteError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg" role="alert">
+                {deleteError}
+              </div>
+            )}
+            <div>
+              <label htmlFor="delete-password" className="label text-red-800">
+                Enter your password to confirm
+              </label>
+              <input
+                id="delete-password"
+                type="password"
+                className="input"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                autoComplete="current-password"
+                required
+                disabled={deleteLoading}
+              />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="submit"
+                disabled={deleteLoading || !deletePassword}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                {deleteLoading ? 'Deleting…' : 'Yes, delete my account'}
+              </button>
+              <button
+                type="button"
+                disabled={deleteLoading}
+                onClick={() => { setShowDelete(false); setDeletePassword(''); setDeleteError('') }}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-gray-600 border border-gray-300 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+      </section>
     </div>
   )
 }

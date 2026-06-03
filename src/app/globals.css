@@ -132,32 +132,6 @@ html.light .footer-edge {
   );
 }
 
-/* Home hero floating demo cards */
-.hero-float-card {
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-}
-html.light .hero-float-card {
-  background: rgba(255, 255, 255, 0.94);
-  border-color: rgba(0, 0, 0, 0.09);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-.hero-float-card-wide {
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(139, 92, 246, 0.12);
-}
-html.light .hero-float-card-wide {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: rgba(0, 0, 0, 0.09);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(139, 92, 246, 0.15);
-}
-
 /* ═══════════════════════════════════════════════════════════
    BASE STYLES
    ═══════════════════════════════════════════════════════════ */

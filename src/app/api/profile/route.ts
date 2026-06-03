@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/db'
-import { getAuthUserFromRequest } from '@/lib/auth'
-import { profileUpdateSchema } from '@/lib/validation'
+import { getAuthUserFromRequest, clearAuthCookie } from '@/lib/auth'
+import { profileUpdateSchema, deleteAccountSchema } from '@/lib/validation'
 import { sanitizeShort, sanitizeRichText } from '@/lib/sanitize'
 
 export async function PATCH(req: NextRequest) {
@@ -37,4 +38,43 @@ export async function PATCH(req: NextRequest) {
   })
 
   return NextResponse.json({ data: user })
+}
+
+/** DELETE — permanently delete the signed-in user and all associated data */
+export async function DELETE(req: NextRequest) {
+  const auth = getAuthUserFromRequest(req)
+  if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  let body: unknown
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 })
+  }
+
+  const parsed = deleteAccountSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]!.message }, { status: 400 })
+  }
+
+  const user = await prisma.user.findUnique({
+    where:  { id: auth.userId },
+    select: { id: true, password: true, active: true },
+  })
+
+  if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+
+  const passwordMatch = await bcrypt.compare(parsed.data.password, user.password)
+  if (!passwordMatch) {
+    return NextResponse.json({ error: 'Incorrect password.' }, { status: 401 })
+  }
+
+  await prisma.user.delete({ where: { id: user.id } })
+
+  const response = NextResponse.json({
+    message: 'Your account and all associated data have been permanently deleted.',
+    redirect: '/',
+  })
+  clearAuthCookie(response)
+  return response
 }

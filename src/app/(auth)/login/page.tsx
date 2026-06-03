@@ -34,17 +34,33 @@ function safeInternalRedirect(param: string | null): string | null {
   return s
 }
 
-/** After login: explicit ?redirect wins, then server-provided path, then role default. */
+function serverRedirect(payload: { redirect?: unknown }): string | null {
+  const r = payload.redirect
+  if (typeof r === 'string' && r.startsWith('/') && !r.startsWith('//')) return r
+  return null
+}
+
+/**
+ * After login: honour ?redirect for deep links (/messages, etc.), but prefer
+ * the server role redirect when the query points at an old role dashboard
+ * (common after SQL role → ADMIN).
+ */
 function destinationAfterLogin(
   redirectParam: string | null,
   payload: { redirect?: unknown; data?: { role?: string } },
 ): string {
-  const fromQuery = safeInternalRedirect(redirectParam)
-  if (fromQuery) return fromQuery
-  if (typeof payload.redirect === 'string' && payload.redirect.startsWith('/') && !payload.redirect.startsWith('//')) {
-    return payload.redirect
-  }
   const role = payload.data?.role
+  const fromQuery = safeInternalRedirect(redirectParam)
+  const fromServer = serverRedirect(payload)
+
+  if (role === 'ADMIN') {
+    if (fromQuery?.startsWith('/admin')) return fromQuery
+    if (fromServer?.startsWith('/admin')) return fromServer
+    return getRoleRedirect('ADMIN')
+  }
+
+  if (fromQuery) return fromQuery
+  if (fromServer) return fromServer
   if (role) return getRoleRedirect(role)
   return '/'
 }
@@ -108,21 +124,6 @@ function LeftPanel() {
               <div className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.45)' }}>{s.label}</div>
             </div>
           ))}
-        </div>
-
-        {/* Testimonial */}
-        <div className="rounded-3xl p-5" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <p className="text-sm leading-relaxed italic" style={{ color: 'rgba(255,255,255,0.65)' }}>
-            &ldquo;Found my Series A investor through Finvest in under two weeks. The platform is exactly what Pakistan&apos;s startup ecosystem needed.&rdquo;
-          </p>
-          <div className="flex items-center gap-3 mt-4">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold text-white"
-                 style={{ background: 'linear-gradient(135deg, #6B21A8, #8B5CF6)' }}>A</div>
-            <div>
-              <p className="text-sm font-semibold text-white">Ahmed Khan</p>
-              <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>Founder, TJ Mart</p>
-            </div>
-          </div>
         </div>
       </div>
 

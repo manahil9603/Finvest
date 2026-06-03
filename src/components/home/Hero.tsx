@@ -22,108 +22,6 @@ function ChevronDown() {
   )
 }
 
-// ── Floating activity notification ────────────────────────────────────────────
-
-function ActivityCard() {
-  return (
-    <motion.div
-      className="hidden lg:block absolute left-6 xl:left-12 top-1/2"
-      initial={{ opacity: 0, x: -40, y: '-50%' }}
-      animate={{ opacity: 1, x: 0, y: ['-50%', 'calc(-50% - 10px)', '-50%'] }}
-      transition={{
-        opacity: { delay: 1.2, duration: 0.6 },
-        x:       { delay: 1.2, duration: 0.6 },
-        y:       { delay: 2, duration: 5, repeat: Infinity, ease: 'easeInOut', repeatType: 'loop' },
-      }}
-    >
-      <div className="hero-float-card w-[220px] rounded-2xl p-4">
-        <div className="flex items-center gap-2 mb-2.5">
-          <span className="w-2 h-2 rounded-full bg-brand-green animate-pulse shrink-0" />
-          <span className="text-[11px] font-bold text-brand-green-glow uppercase tracking-wider">Live Activity</span>
-        </div>
-        <p className="text-sm font-semibold text-foreground leading-snug">Sara Malik</p>
-        <p className="text-xs text-fg-2 mt-0.5 leading-relaxed">Connected with TJ Mart</p>
-        <div className="flex items-center justify-between mt-2.5">
-          <span className="text-[10px] text-fg-3">2 min ago</span>
-          <span
-            className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-            style={{ background: 'rgba(16,185,129,0.15)', color: '#34D399' }}
-          >
-            Investment
-          </span>
-        </div>
-      </div>
-    </motion.div>
-  )
-}
-
-// ── Floating business preview card ────────────────────────────────────────────
-
-function BusinessPreviewCard() {
-  return (
-    <motion.div
-      className="hidden lg:block absolute right-6 xl:right-12 top-1/2"
-      initial={{ opacity: 0, x: 40, y: '-50%' }}
-      animate={{ opacity: 1, x: 0, y: ['-50%', 'calc(-50% - 12px)', '-50%'] }}
-      transition={{
-        opacity: { delay: 1.4, duration: 0.6 },
-        x:       { delay: 1.4, duration: 0.6 },
-        y:       { delay: 2.5, duration: 6, repeat: Infinity, ease: 'easeInOut', repeatType: 'loop' },
-      }}
-    >
-      <div className="hero-float-card-wide w-[240px] rounded-3xl overflow-hidden">
-        {/* Gradient accent */}
-        <div className="h-1" style={{ background: 'linear-gradient(90deg, #6B21A8, #8B5CF6, #10B981)' }} />
-
-        <div className="p-5">
-          {/* Badges */}
-          <div className="flex gap-1.5 mb-3">
-            <span
-              className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-              style={{ background: 'rgba(59,130,246,0.15)', color: '#60A5FA', border: '1px solid rgba(59,130,246,0.2)' }}
-            >
-              Investment
-            </span>
-            <span
-              className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-              style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399', border: '1px solid rgba(16,185,129,0.2)' }}
-            >
-              Startup
-            </span>
-          </div>
-
-          {/* Title */}
-          <h4 className="font-display font-bold text-sm text-foreground mb-0.5">TJ Mart</h4>
-          <p className="text-xs text-fg-3 mb-4">Retail · Pakistan</p>
-
-          {/* Financials */}
-          <div className="grid grid-cols-2 gap-2 mb-4">
-            <div className="rounded-xl p-2.5" style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.15)' }}>
-              <p className="text-[9px] text-fg-3 font-semibold uppercase tracking-wide">Asking</p>
-              <p className="text-xs font-bold mt-0.5" style={{ color: '#A78BFA' }}>PKR 3 Cr</p>
-            </div>
-            <div className="rounded-xl p-2.5" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.15)' }}>
-              <p className="text-[9px] text-fg-3 font-semibold uppercase tracking-wide">Revenue</p>
-              <p className="text-xs font-bold mt-0.5" style={{ color: '#34D399' }}>PKR 1.1 Cr</p>
-            </div>
-          </div>
-
-          {/* Owner */}
-          <div className="flex items-center gap-2 border-t border-border/12 pt-3">
-            <div
-              className="w-6 h-6 rounded-lg flex items-center justify-center text-[10px] font-black text-white shrink-0"
-              style={{ background: 'linear-gradient(135deg, #6B21A8, #8B5CF6)' }}
-            >
-              A
-            </div>
-            <span className="text-xs text-fg-2">Ahmed Khan ✅</span>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  )
-}
-
 // ── Stagger container variants ────────────────────────────────────────────────
 
 const container = {
@@ -203,10 +101,6 @@ export function Hero({ isLoggedIn }: HeroProps) {
           }}
         />
       </motion.div>
-
-      {/* ── Floating cards (desktop) ─────────────────────────── */}
-      <ActivityCard />
-      <BusinessPreviewCard />
 
       {/* ── Main content ─────────────────────────────────────── */}
       <motion.div
