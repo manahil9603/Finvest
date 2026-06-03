@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { getAuthUserFromRequest, clearAuthCookie } from '@/lib/auth'
 import { profileUpdateSchema, deleteAccountSchema } from '@/lib/validation'
 import { sanitizeShort, sanitizeRichText } from '@/lib/sanitize'
+import { sendAccountDeletedEmail } from '@/lib/email'
 
 export async function PATCH(req: NextRequest) {
   const auth = getAuthUserFromRequest(req)
@@ -59,7 +60,7 @@ export async function DELETE(req: NextRequest) {
 
   const user = await prisma.user.findUnique({
     where:  { id: auth.userId },
-    select: { id: true, password: true, active: true },
+    select: { id: true, name: true, email: true, password: true, active: true },
   })
 
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
@@ -67,6 +68,12 @@ export async function DELETE(req: NextRequest) {
   const passwordMatch = await bcrypt.compare(parsed.data.password, user.password)
   if (!passwordMatch) {
     return NextResponse.json({ error: 'Incorrect password.' }, { status: 401 })
+  }
+
+  try {
+    await sendAccountDeletedEmail({ to: user.email, name: user.name })
+  } catch (err) {
+    console.error('[DELETE /api/profile] deletion email:', err)
   }
 
   await prisma.user.delete({ where: { id: user.id } })

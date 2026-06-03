@@ -249,3 +249,79 @@ export async function sendPasswordResetEmail(params: PasswordResetEmailParams): 
     logLabel: 'Password reset email',
   })
 }
+
+// ── Account deleted email ─────────────────────────────────────────────────────
+
+function buildAccountDeletedHtml(params: { name: string; email: string }): string {
+  const safeName  = escapeHtml(params.name)
+  const safeEmail = escapeHtml(params.email)
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
+<body style="margin:0;padding:0;background:#0f0f0f;font-family:system-ui,-apple-system,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f0f;padding:32px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:520px;background:#1a1a1a;border:1px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden;">
+        <tr>
+          <td style="padding:28px 32px;background:linear-gradient(135deg,#6B21A8,#8B5CF6);">
+            <p style="margin:0;font-size:22px;font-weight:800;color:#fff;">Finvest</p>
+            <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.85);">Account deleted</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px;color:rgba(255,255,255,0.9);font-size:15px;line-height:1.6;">
+            <p style="margin:0 0 16px;">Hi <strong>${safeName}</strong>,</p>
+            <p style="margin:0 0 16px;color:rgba(255,255,255,0.75);">
+              Your Finvest account (<span style="color:rgba(255,255,255,0.9);">${safeEmail}</span>) has been permanently deleted, along with your listings, messages, and connections.
+            </p>
+            <p style="margin:0 0 16px;color:rgba(255,255,255,0.75);">
+              You will no longer be able to sign in with this email unless you register again.
+            </p>
+            <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.4);">
+              If you did not request this deletion, contact support@finvest.pk immediately.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`
+}
+
+function buildAccountDeletedText(params: { name: string; email: string }): string {
+  return [
+    `Hi ${params.name},`,
+    '',
+    `Your Finvest account (${params.email}) has been permanently deleted.`,
+    'Your listings, messages, and connections have been removed.',
+    '',
+    'You can register again anytime with the same email if you change your mind.',
+    '',
+    'If you did not request this deletion, contact support@finvest.pk immediately.',
+  ].join('\n')
+}
+
+export interface AccountDeletedEmailParams {
+  to:   string
+  name: string
+}
+
+/** Notifies the user their account was deleted. Skips silently if SMTP is not configured. */
+export async function sendAccountDeletedEmail(params: AccountDeletedEmailParams): Promise<void> {
+  if (!isEmailConfigured()) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[email] SMTP not configured — skipping account deleted email')
+    }
+    return
+  }
+
+  const body = { name: params.name, email: params.to }
+  await sendMailMessage({
+    to:       params.to,
+    subject:  'Your Finvest account has been deleted',
+    text:     buildAccountDeletedText(body),
+    html:     buildAccountDeletedHtml(body),
+    logLabel: 'Account deleted email',
+  })
+}
