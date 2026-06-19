@@ -25,6 +25,7 @@ function buildContentSecurityPolicy() {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     "img-src 'self' data: blob: https:",
+    "media-src 'self' data: blob: https:",
     // Next.js API + Socket.io server (ws/wss for WebSocket)
     [
       "connect-src 'self'",

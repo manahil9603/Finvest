@@ -2,7 +2,7 @@
 // Enums  (mirror prisma/schema.prisma)
 // ─────────────────────────────────────────────────────────────
 
-export type Role = 'BUSINESS_OWNER' | 'INVESTOR' | 'BUYER' | 'ADMIN'
+export type Role = 'BUSINESS_OWNER' | 'INVESTOR' | 'BUYER' | 'BUSINESS_EXPERT' | 'ADMIN'
 
 export type BusinessStage = 'IDEA' | 'STARTUP' | 'GROWING' | 'EXPANDING' | 'MATURE'
 
@@ -70,8 +70,11 @@ export interface Business {
   established: number | null
   highlights: string[]
   imageUrls: string[]
+  videoUrl: string | null
   featured: boolean
   status: BusinessStatus
+  isRegistered: boolean
+  seekingOperator: boolean
   ownerId: string
   owner: UserRef
   createdAt: string

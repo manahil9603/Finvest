@@ -25,7 +25,10 @@ export interface BusinessFormData {
   established: string
   highlights:  string[]
   imageUrls:   string[]
+  videoUrl:    string | null
   status:      'DRAFT' | 'ACTIVE'
+  isRegistered:    boolean | null
+  seekingOperator: boolean
 }
 
 export interface BusinessDraft {
@@ -44,8 +47,11 @@ export interface BusinessDraft {
   established: number | null
   highlights:  string[]
   imageUrls:   string[]
+  videoUrl:    string | null
   status:      string
   featured:    boolean
+  isRegistered:    boolean
+  seekingOperator: boolean
   createdAt:   string
   /** Present on server-loaded rows (trust score); optional after client-only edits */
   owner?: {
@@ -75,7 +81,8 @@ function empty(): BusinessFormData {
     title: '', description: '', industry: '', city: '', province: '',
     listingType: 'INVESTMENT', stage: 'GROWING',
     askingPrice: '', revenue: '', profit: '', employees: '', established: '',
-    highlights: [], imageUrls: [], status: 'DRAFT',
+    highlights: [], imageUrls: [], videoUrl: null, status: 'DRAFT',
+    isRegistered: null, seekingOperator: false,
   }
 }
 
@@ -95,7 +102,10 @@ function fromDraft(d: BusinessDraft): BusinessFormData {
     established: d.established != null ? String(d.established) : '',
     highlights:  d.highlights,
     imageUrls:   d.imageUrls,
+    videoUrl:    d.videoUrl ?? null,
     status:      (d.status === 'ACTIVE' ? 'ACTIVE' : 'DRAFT') as 'DRAFT' | 'ACTIVE',
+    isRegistered:    d.isRegistered,
+    seekingOperator: d.seekingOperator ?? false,
   }
 }
 
@@ -113,7 +123,7 @@ function listingTypeFromIntent(isForSale: boolean, isSeekingInvestment: boolean)
   return ''
 }
 
-function readImageAsDataUrl(file: File): Promise<string> {
+function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(String(reader.result))
@@ -121,6 +131,9 @@ function readImageAsDataUrl(file: File): Promise<string> {
     reader.readAsDataURL(file)
   })
 }
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const MAX_VIDEO_BYTES = 20 * 1024 * 1024
 
 // ─────────────────────────────────────────────────────────────
 // Sub-components
@@ -155,11 +168,12 @@ function Field({ label, error, children, hint }: {
 export function BusinessFormPanel({ open, onClose, onSaved, editing }: Props) {
   const { success, error: showError } = useToast()
   const [form, setForm]     = useState<BusinessFormData>(() => editing ? fromDraft(editing) : empty())
-  const [errors, setErrors] = useState<Partial<Record<keyof BusinessFormData, string>>>({})
+  const [errors, setErrors] = useState<Partial<Record<keyof BusinessFormData | 'isRegistered', string>>>({})
   const [loading, setLoading] = useState(false)
   const [tagInput, setTagInput] = useState('')
   const [imagePreviews, setImagePreviews] = useState<string[]>(() => editing?.imageUrls ?? [])
   const fileRef = useRef<HTMLInputElement>(null)
+  const videoRef = useRef<HTMLInputElement>(null)
 
   // Reset form when editing target changes
   const prevEditing = useRef(editing?.id)
@@ -171,7 +185,7 @@ export function BusinessFormPanel({ open, onClose, onSaved, editing }: Props) {
     setImagePreviews(editing?.imageUrls ?? [])
   }
 
-  const set = useCallback((field: keyof BusinessFormData, value: string | string[]) => {
+  const set = useCallback((field: keyof BusinessFormData, value: string | string[] | boolean | null) => {
     setForm((prev) => ({ ...prev, [field]: value }))
     setErrors((prev) => ({ ...prev, [field]: undefined }))
   }, [])
@@ -192,13 +206,16 @@ export function BusinessFormPanel({ open, onClose, onSaved, editing }: Props) {
     if (!files) return
     const remaining = Math.max(0, 5 - form.imageUrls.length)
     const valid = Array.from(files)
-      .filter((f) => f.type.startsWith('image/') && f.size <= 5 * 1024 * 1024)
+      .filter((f) => f.type.startsWith('image/') && f.size <= MAX_IMAGE_BYTES)
       .slice(0, remaining)
 
-    if (valid.length === 0) return
+    if (valid.length === 0) {
+      showError('Upload failed', 'Use PNG, JPG, or WebP images up to 5 MB each.')
+      return
+    }
 
     try {
-      const imageUrls = await Promise.all(valid.map(readImageAsDataUrl))
+      const imageUrls = await Promise.all(valid.map(readFileAsDataUrl))
       setForm((prev) => ({ ...prev, imageUrls: [...prev.imageUrls, ...imageUrls].slice(0, 5) }))
       setImagePreviews((prev) => [...prev, ...imageUrls].slice(0, 5))
       setErrors((prev) => ({ ...prev, imageUrls: undefined }))
@@ -217,6 +234,35 @@ export function BusinessFormPanel({ open, onClose, onSaved, editing }: Props) {
     }))
   }
 
+  const handleVideo = async (files: FileList | null) => {
+    const file = files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('video/')) {
+      showError('Invalid file', 'Please upload an MP4, WebM, or MOV video.')
+      return
+    }
+    if (file.size > MAX_VIDEO_BYTES) {
+      showError('File too large', 'Videos must be 20 MB or smaller.')
+      return
+    }
+
+    try {
+      const videoUrl = await readFileAsDataUrl(file)
+      setForm((prev) => ({ ...prev, videoUrl }))
+      setErrors((prev) => ({ ...prev, videoUrl: undefined }))
+    } catch {
+      showError('Upload failed', 'The video could not be read.')
+    } finally {
+      if (videoRef.current) videoRef.current.value = ''
+    }
+  }
+
+  const removeVideo = () => {
+    setForm((prev) => ({ ...prev, videoUrl: null }))
+    if (videoRef.current) videoRef.current.value = ''
+  }
+
   const setOpportunityIntent = (field: 'isForSale' | 'isSeekingInvestment', value: boolean) => {
     const current = intentFromListingType(form.listingType)
     const next = { ...current, [field]: value }
@@ -225,7 +271,7 @@ export function BusinessFormPanel({ open, onClose, onSaved, editing }: Props) {
 
   // ── Validation ─────────────────────────────────────────────
   function validate(): boolean {
-    const e: Partial<Record<keyof BusinessFormData, string>> = {}
+    const e: Partial<Record<keyof BusinessFormData | 'isRegistered', string>> = {}
     if (!form.title.trim()       || form.title.trim().length < 5)  e.title = 'Title must be at least 5 characters.'
     if (!form.description.trim() || form.description.trim().length < 20) e.description = 'Description must be at least 20 characters.'
     if (!form.industry)          e.industry    = 'Please select an industry.'
@@ -233,6 +279,7 @@ export function BusinessFormPanel({ open, onClose, onSaved, editing }: Props) {
     if (!form.province)          e.province    = 'Please select a province.'
     if (!form.stage)             e.stage       = 'Please select a business stage.'
     if (!form.listingType)       e.listingType = 'Choose at least one opportunity type.'
+    if (form.isRegistered === null) e.isRegistered = 'Please indicate whether the business is registered.'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -245,12 +292,15 @@ export function BusinessFormPanel({ open, onClose, onSaved, editing }: Props) {
       const payload = {
         ...form,
         status,
+        isRegistered:    form.isRegistered ?? false,
+        seekingOperator: form.seekingOperator,
         askingPrice: form.askingPrice ? Number(form.askingPrice) : null,
         revenue:     form.revenue     ? Number(form.revenue)     : null,
         profit:      form.profit      ? Number(form.profit)      : null,
         employees:   form.employees   ? Number(form.employees)   : null,
         established: form.established ? Number(form.established) : null,
         imageUrls:   form.imageUrls,
+        videoUrl:    form.videoUrl,
       }
 
       const isNew = !editing
@@ -417,9 +467,87 @@ export function BusinessFormPanel({ open, onClose, onSaved, editing }: Props) {
                 </div>
               </section>
 
+              {/* ── Registration & leadership ─────────────────── */}
+              <section>
+                <SectionLabel>3. Registration & Leadership</SectionLabel>
+                <Field label="Is this business legally registered? *" error={errors.isRegistered}>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { value: true,  label: 'Yes — registered', desc: 'Registered with SECP, FBR, or relevant authority' },
+                      { value: false, label: 'Not yet registered', desc: 'Operating informally or registration in progress' },
+                    ].map((item) => {
+                      const checked = form.isRegistered === item.value
+                      return (
+                        <button
+                          key={String(item.value)}
+                          type="button"
+                          onClick={() => set('isRegistered', item.value)}
+                          className="w-full flex items-start gap-3 p-4 rounded-2xl text-left transition-all duration-150"
+                          style={
+                            checked
+                              ? { background: 'rgba(16,185,129,0.12)', border: '1.5px solid rgba(16,185,129,0.45)' }
+                              : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }
+                          }
+                          aria-pressed={checked}
+                        >
+                          <span
+                            className="mt-0.5 w-5 h-5 rounded-md flex items-center justify-center text-[10px] text-white shrink-0"
+                            style={{
+                              background: checked ? '#10B981' : 'rgba(255,255,255,0.06)',
+                              border: checked ? '1px solid #10B981' : '1px solid rgba(255,255,255,0.16)',
+                            }}
+                          >
+                            {checked ? '✓' : ''}
+                          </span>
+                          <span>
+                            <span className="block text-sm font-semibold text-foreground">{item.label}</span>
+                            <span className="block text-xs text-fg-3">{item.desc}</span>
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </Field>
+
+                <div className="mt-4">
+                  <Field
+                    label="Looking for an operator / CEO?"
+                    hint="Enable if you want a business expert with leadership skills to run this business."
+                  >
+                    <button
+                      type="button"
+                      onClick={() => set('seekingOperator', !form.seekingOperator)}
+                      className="w-full flex items-start gap-3 p-4 rounded-2xl text-left transition-all duration-150"
+                      style={
+                        form.seekingOperator
+                          ? { background: 'rgba(139,92,246,0.15)', border: '1.5px solid rgba(139,92,246,0.5)' }
+                          : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }
+                      }
+                      aria-pressed={form.seekingOperator}
+                    >
+                      <span
+                        className="mt-0.5 w-5 h-5 rounded-md flex items-center justify-center text-[10px] text-white shrink-0"
+                        style={{
+                          background: form.seekingOperator ? '#8B5CF6' : 'rgba(255,255,255,0.06)',
+                          border: form.seekingOperator ? '1px solid #8B5CF6' : '1px solid rgba(255,255,255,0.16)',
+                        }}
+                      >
+                        {form.seekingOperator ? '✓' : ''}
+                      </span>
+                      <span>
+                        <span className="block text-sm font-semibold text-foreground">Seeking a skilled operator / CEO</span>
+                        <span className="block text-xs text-fg-3">
+                          Connect with business experts who can lead day-to-day operations and growth.
+                        </span>
+                      </span>
+                    </button>
+                  </Field>
+                </div>
+              </section>
+
               {/* ── Listing Type ──────────────────────────────── */}
               <section>
-                <SectionLabel>3. What Are You Seeking?</SectionLabel>
+                <SectionLabel>4. What Are You Seeking?</SectionLabel>
                 <Field label="Opportunity Type *" error={errors.listingType}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {[
@@ -469,7 +597,7 @@ export function BusinessFormPanel({ open, onClose, onSaved, editing }: Props) {
 
               {/* ── Business Stage ────────────────────────────── */}
               <section>
-                <SectionLabel>4. Business Stage</SectionLabel>
+                <SectionLabel>5. Business Stage</SectionLabel>
                 <select className="input appearance-none" value={form.stage} onChange={(e) => set('stage', e.target.value)}>
                   {STAGES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                 </select>
@@ -477,7 +605,7 @@ export function BusinessFormPanel({ open, onClose, onSaved, editing }: Props) {
 
               {/* ── Financials ────────────────────────────────── */}
               <section>
-                <SectionLabel>5. Financials (PKR) — Optional but recommended</SectionLabel>
+                <SectionLabel>6. Financials (PKR) — Optional but recommended</SectionLabel>
                 <div className="rounded-2xl px-4 py-3 mb-4 text-xs leading-relaxed"
                      style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.15)', color: 'rgba(253,186,116,0.8)' }}>
                   ⚠ Only enter accurate, verifiable figures. Misleading data may result in account suspension.
@@ -512,7 +640,7 @@ export function BusinessFormPanel({ open, onClose, onSaved, editing }: Props) {
 
               {/* ── Key Highlights ────────────────────────────── */}
               <section>
-                <SectionLabel>6. Key Highlights (up to 6)</SectionLabel>
+                <SectionLabel>7. Key Highlights (up to 6)</SectionLabel>
                 <div className="flex gap-2 mb-3">
                   <input
                     className="input flex-1 text-sm"
@@ -546,45 +674,91 @@ export function BusinessFormPanel({ open, onClose, onSaved, editing }: Props) {
                 </div>
               </section>
 
-              {/* ── Images ───────────────────────────────────────── */}
+              {/* ── Photos & video ──────────────────────────────── */}
               <section>
-                <SectionLabel>7. Business Images (up to 5)</SectionLabel>
+                <SectionLabel>8. Photos &amp; Video (optional)</SectionLabel>
+                <p className="text-xs text-fg-3 mb-4 leading-relaxed">
+                  Add up to 5 photos and one short video to showcase your business. Photos up to 5 MB each; video up to 20 MB (MP4, WebM, or MOV).
+                </p>
+
                 <input ref={fileRef} type="file" accept="image/*" multiple className="hidden"
                   onChange={(e) => handleFiles(e.target.files)} />
+                <input ref={videoRef} type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov" className="hidden"
+                  onChange={(e) => handleVideo(e.target.files)} />
 
-                {imagePreviews.length < 5 && (
-                  <button type="button" onClick={() => fileRef.current?.click()}
-                    className="w-full flex flex-col items-center justify-center gap-2 py-8 rounded-2xl transition-all text-sm text-fg-3 hover:text-fg-2"
-                    style={{ background: 'rgba(255,255,255,0.03)', border: '1.5px dashed rgba(255,255,255,0.12)' }}>
-                    <span className="text-3xl">🖼️</span>
-                    <span>Click to upload images</span>
-                    <span className="text-xs text-fg-3">PNG, JPG up to 5MB each · max 5 images</span>
-                  </button>
-                )}
-
-                {imagePreviews.length > 0 && (
-                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-3">
-                    {imagePreviews.map((src, i) => (
-                      <div key={i} className="relative aspect-square rounded-xl overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={src} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
-                        <button type="button"
-                          onClick={() => removeImage(i)}
-                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white text-xs flex items-center justify-center"
-                          aria-label={`Remove image ${i + 1}`}>
-                          ✕
-                        </button>
-                      </div>
-                    ))}
+                <div className="space-y-4">
+                  {/* Images */}
+                  <Field label="Photos">
                     {imagePreviews.length < 5 && (
                       <button type="button" onClick={() => fileRef.current?.click()}
-                        className="aspect-square rounded-xl flex items-center justify-center text-2xl text-fg-3 hover:text-fg-2 transition-colors"
-                        style={{ border: '1.5px dashed rgba(255,255,255,0.12)' }} aria-label="Add more images">
-                        +
+                        className="w-full flex flex-col items-center justify-center gap-2 py-6 rounded-2xl transition-all text-sm text-fg-3 hover:text-fg-2"
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1.5px dashed rgba(255,255,255,0.12)' }}>
+                        <span className="text-2xl">🖼️</span>
+                        <span>Click to upload photos</span>
+                        <span className="text-xs text-fg-3">PNG, JPG, WebP · max 5 photos</span>
                       </button>
                     )}
-                  </div>
-                )}
+
+                    {imagePreviews.length > 0 && (
+                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-3">
+                        {imagePreviews.map((src, i) => (
+                          <div key={i} className="relative aspect-square rounded-xl overflow-hidden">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={src} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
+                            <button type="button"
+                              onClick={() => removeImage(i)}
+                              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 text-white text-xs flex items-center justify-center"
+                              aria-label={`Remove image ${i + 1}`}>
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                        {imagePreviews.length < 5 && (
+                          <button type="button" onClick={() => fileRef.current?.click()}
+                            className="aspect-square rounded-xl flex items-center justify-center text-2xl text-fg-3 hover:text-fg-2 transition-colors"
+                            style={{ border: '1.5px dashed rgba(255,255,255,0.12)' }} aria-label="Add more photos">
+                            +
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </Field>
+
+                  {/* Video */}
+                  <Field label="Video tour / pitch">
+                    {form.videoUrl ? (
+                      <div className="relative rounded-2xl overflow-hidden"
+                           style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <video
+                          src={form.videoUrl}
+                          controls
+                          playsInline
+                          className="w-full max-h-64 object-contain bg-black"
+                        />
+                        <div className="flex gap-2 p-3">
+                          <button type="button" onClick={() => videoRef.current?.click()}
+                            className="flex-1 py-2 rounded-xl text-xs font-semibold text-fg-2 hover:text-foreground transition-colors"
+                            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            Replace video
+                          </button>
+                          <button type="button" onClick={removeVideo}
+                            className="px-4 py-2 rounded-xl text-xs font-semibold text-red-400 hover:text-red-300 transition-colors"
+                            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                            Remove
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => videoRef.current?.click()}
+                        className="w-full flex flex-col items-center justify-center gap-2 py-6 rounded-2xl transition-all text-sm text-fg-3 hover:text-fg-2"
+                        style={{ background: 'rgba(255,255,255,0.03)', border: '1.5px dashed rgba(255,255,255,0.12)' }}>
+                        <span className="text-2xl">🎬</span>
+                        <span>Click to upload a video</span>
+                        <span className="text-xs text-fg-3">MP4, WebM, or MOV · max 20 MB · one video per listing</span>
+                      </button>
+                    )}
+                  </Field>
+                </div>
               </section>
 
               {/* Bottom spacer */}

@@ -28,6 +28,22 @@ export function cn(...classes: (string | undefined | false | null)[]): string {
   return classes.filter(Boolean).join(' ')
 }
 
+/** Accept only same-origin paths — blocks open redirects. */
+export function safeInternalRedirect(param: string | null | undefined): string | null {
+  const s = param?.trim()
+  if (!s) return null
+  if (!s.startsWith('/') || s.startsWith('//')) return null
+  if (s.includes('://')) return null
+  return s
+}
+
+/** Business detail URL — guests are sent to sign in first with a return path. */
+export function businessDetailHref(businessId: string, isLoggedIn: boolean): string {
+  const detail = `/businesses/${businessId}`
+  if (isLoggedIn) return detail
+  return `/login?redirect=${encodeURIComponent(detail)}`
+}
+
 export const INDUSTRY_LABELS: Record<string, string> = {
   TECHNOLOGY: 'Technology',
   RETAIL: 'Retail',

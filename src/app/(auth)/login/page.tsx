@@ -261,15 +261,7 @@ function LoginContent() {
 
               {/* Password */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label htmlFor="password" className="label mb-0">Password</label>
-                  <Link href="/forgot-password"
-                        className="text-xs font-medium transition-colors"
-                        style={{ color: 'rgba(139,92,246,0.8)' }}
-                        tabIndex={-1}>
-                    Forgot password?
-                  </Link>
-                </div>
+                <label htmlFor="password" className="label">Password</label>
                 <div className="relative">
                   <input
                     id="password"

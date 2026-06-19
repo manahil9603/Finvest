@@ -69,15 +69,27 @@ export const registerSchema = z
     email:           emailField,
     password:        passwordField,
     confirmPassword: z.string().min(1, 'Please confirm your password'),
-    role: z.enum(['BUSINESS_OWNER', 'INVESTOR', 'BUYER'], {
+    role: z.enum(['BUSINESS_OWNER', 'INVESTOR', 'BUYER', 'BUSINESS_EXPERT'], {
       errorMap: () => ({ message: 'Please select a valid role' }),
     }),
     phone: phoneField,
     city:  z.string().min(1, 'City is required').max(80).trim().optional(),
+    yearsExperience: z.number().int().min(0).max(50).optional(),
+    skills:          z.string().max(500).trim().optional(),
+    expertSummary:   z.string().max(1000).trim().optional(),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: 'Passwords do not match',
     path:    ['confirmPassword'],
+  })
+  .superRefine((d, ctx) => {
+    if (d.role !== 'BUSINESS_EXPERT') return
+    if (d.yearsExperience == null || d.yearsExperience < 1) {
+      ctx.addIssue({ code: 'custom', message: 'Enter at least 1 year of business experience', path: ['yearsExperience'] })
+    }
+    if (!d.skills || d.skills.trim().length < 5) {
+      ctx.addIssue({ code: 'custom', message: 'Describe your business skills (at least 5 characters)', path: ['skills'] })
+    }
   })
 
 export const loginSchema = z.object({
@@ -85,25 +97,8 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required').max(128),
 })
 
-export const forgotPasswordSchema = z.object({
-  email: emailField,
-})
-
-export const resetPasswordSchema = z
-  .object({
-    token:           z.string().min(32, 'Invalid or expired reset link.').max(128),
-    password:        passwordField,
-    confirmPassword: z.string().min(1, 'Please confirm your password'),
-  })
-  .refine((d) => d.password === d.confirmPassword, {
-    message: 'Passwords do not match',
-    path:    ['confirmPassword'],
-  })
-
-export type RegisterInput      = z.infer<typeof registerSchema>
-export type LoginInput         = z.infer<typeof loginSchema>
-export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>
-export type ResetPasswordInput  = z.infer<typeof resetPasswordSchema>
+export type RegisterInput = z.infer<typeof registerSchema>
+export type LoginInput    = z.infer<typeof loginSchema>
 
 // ── Business schemas ──────────────────────────────────────────────────────────
 
@@ -136,6 +131,22 @@ const imageUrlField = z.string().refine((value) => {
   }
 }, 'Each image must be a valid image URL')
 
+const MAX_VIDEO_DATA_URL_LEN = 28_000_000 // ~20 MB file as base64
+
+const videoUrlField = z
+  .string()
+  .max(MAX_VIDEO_DATA_URL_LEN, 'Video file is too large (max 20 MB)')
+  .refine((value) => {
+    if (/^data:video\/(mp4|webm|quicktime|x-msvideo);base64,/i.test(value)) return true
+
+    try {
+      const url = new URL(value)
+      return url.protocol === 'http:' || url.protocol === 'https:'
+    } catch {
+      return false
+    }
+  }, 'Video must be a valid MP4, WebM, or MOV file')
+
 export const createBusinessSchema = z.object({
   title:       z.string().min(5, 'Title must be at least 5 characters').max(160).trim(),
   description: z.string().min(20, 'Description must be at least 20 characters').max(10_000).trim(),
@@ -163,6 +174,9 @@ export const createBusinessSchema = z.object({
     .array(imageUrlField)
     .max(5, 'Maximum 5 images')
     .default([]),
+  videoUrl: videoUrlField.nullable().optional(),
+  isRegistered:    z.boolean().default(false),
+  seekingOperator: z.boolean().default(false),
   status: z.enum(['DRAFT', 'ACTIVE']).default('DRAFT'),
 })
 

@@ -20,6 +20,7 @@ export interface FilterState {
   minRevenue:     number
   maxRevenue:     number
   verifiedOnly:   boolean
+  seekingOperator: boolean
   minTrustScore:  number   // 0–100
   sortBy:         SortOption
   page:           number
@@ -80,6 +81,7 @@ export const DEFAULT_FILTERS: FilterState = {
   minRevenue:     0,
   maxRevenue:     0,
   verifiedOnly:   false,
+  seekingOperator: false,
   minTrustScore:  0,
   sortBy:         'featured',
   page:           1,

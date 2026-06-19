@@ -4,6 +4,7 @@ import { Disclaimer } from '@/components/layout/Disclaimer'
 import { getAuthUser } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import { Hero } from '@/components/home/Hero'
+import { HomeAutoScroll } from '@/components/home/HomeAutoScroll'
 import { Stats } from '@/components/home/Stats'
 import { FeaturedGrid } from '@/components/home/FeaturedGrid'
 import { HowItWorks } from '@/components/home/HowItWorks'
@@ -23,7 +24,7 @@ async function getFeaturedBusinesses() {
       _count: { select: { connections: true, savedBy: true } },
     },
     orderBy: [{ featured: 'desc' }, { createdAt: 'desc' }],
-    take: 6,
+    take: 12,
   })
 
   // Serialise Prisma Decimal + Date before passing to client components
@@ -69,9 +70,10 @@ export default async function HomePage() {
       <Disclaimer />
       <Navbar user={auth} />
       <main>
+        <HomeAutoScroll />
         <Hero isLoggedIn={!!auth} />
+        <FeaturedGrid businesses={businesses as unknown as Business[]} isLoggedIn={!!auth} />
         <Stats stats={stats} />
-        <FeaturedGrid businesses={businesses as unknown as Business[]} />
         <HowItWorks />
         <Testimonials />
         <CTABanner isLoggedIn={!!auth} />

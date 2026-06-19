@@ -13,7 +13,7 @@ import type { JWTPayload } from './auth'
 export const isAdmin         = (role: string) => role === 'ADMIN'
 export const isBusinessOwner = (role: string) => role === 'BUSINESS_OWNER' || role === 'ADMIN'
 export const canInvest       = (role: string) => ['INVESTOR', 'BUYER', 'ADMIN'].includes(role)
-export const isVerifiedRole  = (role: string) => ['BUSINESS_OWNER', 'INVESTOR', 'BUYER', 'ADMIN'].includes(role)
+export const isVerifiedRole  = (role: string) => ['BUSINESS_OWNER', 'INVESTOR', 'BUYER', 'BUSINESS_EXPERT', 'ADMIN'].includes(role)
 
 // ── Resource ownership ────────────────────────────────────────────────────────
 

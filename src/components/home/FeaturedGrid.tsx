@@ -8,16 +8,19 @@ import type { Business } from '@/types'
 
 interface FeaturedGridProps {
   businesses: Business[]
+  isLoggedIn?: boolean
 }
 
-export function FeaturedGrid({ businesses }: FeaturedGridProps) {
+export function FeaturedGrid({ businesses, isLoggedIn = false }: FeaturedGridProps) {
   const ref    = useRef<HTMLDivElement>(null)
   const inView = useInView(ref, { once: true, margin: '-60px' })
 
   if (businesses.length === 0) return null
 
+  const browseHref = isLoggedIn ? '/explore' : '/login'
+
   return (
-    <section className="relative py-16 sm:py-24 px-4" ref={ref}>
+    <section id="listed-businesses" className="relative py-16 sm:py-24 px-4 scroll-mt-20" ref={ref}>
       {/* Top glow divider */}
       <div
         className="absolute inset-x-0 top-0 h-px pointer-events-none"
@@ -34,18 +37,31 @@ export function FeaturedGrid({ businesses }: FeaturedGridProps) {
         >
           <div>
             <p className="text-xs font-bold uppercase tracking-widest text-fg-3 mb-2">
-              Live listings
+              Browse listings
             </p>
             <h2 className="font-display font-black text-3xl sm:text-4xl text-foreground mb-2">
-              Featured Opportunities
+              {isLoggedIn ? (
+                'Listed Businesses'
+              ) : (
+                <Link href={browseHref} className="hover:text-brand-purple-light transition-colors">
+                  Listed Businesses
+                </Link>
+              )}
             </h2>
             <p className="text-fg-2 text-sm">
-              Hand-picked, verified listings across Pakistan&apos;s fastest-growing industries.
+              {isLoggedIn
+                ? 'Active opportunities across Pakistan — tap a listing for full details.'
+                : 'Active opportunities across Pakistan — sign in to view full details and connect.'}
             </p>
+            {!isLoggedIn && (
+              <p className="text-xs text-fg-3 mt-2">
+                Tap a listing to sign in →
+              </p>
+            )}
           </div>
 
           <Link
-            href="/explore"
+            href={browseHref}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 shrink-0"
             style={{
               background: 'rgba(139,92,246,0.1)',
@@ -73,7 +89,7 @@ export function FeaturedGrid({ businesses }: FeaturedGridProps) {
                 ease:     [0.16, 1, 0.3, 1],
               }}
             >
-              <ListingCard listing={biz} />
+              <ListingCard listing={biz} isLoggedIn={isLoggedIn} />
             </motion.div>
           ))}
         </div>
@@ -86,7 +102,7 @@ export function FeaturedGrid({ businesses }: FeaturedGridProps) {
           transition={{ delay: 0.7, duration: 0.5 }}
         >
           <Link
-            href="/explore"
+            href={browseHref}
             className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl font-semibold text-base text-white transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5"
             style={{
               background: 'linear-gradient(135deg, #6B21A8, #8B5CF6)',

@@ -7,7 +7,7 @@
 
 import { getRoleRedirect } from './constants'
 
-export type AppRole = 'BUSINESS_OWNER' | 'INVESTOR' | 'BUYER' | 'ADMIN'
+export type AppRole = 'BUSINESS_OWNER' | 'INVESTOR' | 'BUYER' | 'BUSINESS_EXPERT' | 'ADMIN'
 
 // ─────────────────────────────────────────────────────────────
 // Route permission table
@@ -29,13 +29,14 @@ export const ROUTE_RULES: RouteRule[] = [
   { pattern: /^\/dashboard\/business/, roles: ['BUSINESS_OWNER', 'ADMIN'] },
   { pattern: /^\/dashboard\/investor/, roles: ['INVESTOR', 'ADMIN'] },
   { pattern: /^\/dashboard\/buyer/,    roles: ['BUYER', 'ADMIN'] },
+  { pattern: /^\/dashboard\/expert/,   roles: ['BUSINESS_EXPERT', 'ADMIN'] },
 
   // Generic dashboard — any authenticated user
-  { pattern: /^\/dashboard/,           roles: ['BUSINESS_OWNER', 'INVESTOR', 'BUYER', 'ADMIN'] },
+  { pattern: /^\/dashboard/,           roles: ['BUSINESS_OWNER', 'INVESTOR', 'BUYER', 'BUSINESS_EXPERT', 'ADMIN'] },
 
   // Feature routes — any authenticated user
-  { pattern: /^\/messages/,            roles: ['BUSINESS_OWNER', 'INVESTOR', 'BUYER', 'ADMIN'] },
-  { pattern: /^\/profile/,             roles: ['BUSINESS_OWNER', 'INVESTOR', 'BUYER', 'ADMIN'] },
+  { pattern: /^\/messages/,            roles: ['BUSINESS_OWNER', 'INVESTOR', 'BUYER', 'BUSINESS_EXPERT', 'ADMIN'] },
+  { pattern: /^\/profile/,             roles: ['BUSINESS_OWNER', 'INVESTOR', 'BUYER', 'BUSINESS_EXPERT', 'ADMIN'] },
 
   // Listing creation — owners only
   { pattern: /^\/listings\/new/,       roles: ['BUSINESS_OWNER', 'ADMIN'] },

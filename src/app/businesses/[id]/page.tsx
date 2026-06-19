@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -129,6 +129,11 @@ export default async function BusinessProfilePage({
 
   if (!business) notFound()
 
+  // Guests must sign up before viewing full business details
+  if (!auth) {
+    redirect(`/signup?redirect=${encodeURIComponent(`/businesses/${id}`)}`)
+  }
+
   // Draft visibility gate
   if (business.status === 'DRAFT' && business.ownerId !== auth?.userId && auth?.role !== 'ADMIN') {
     notFound()
@@ -175,8 +180,14 @@ export default async function BusinessProfilePage({
 
       {/* ═══════════════ COVER BANNER ═══════════════ */}
       <div className="relative h-64 sm:h-80 overflow-hidden" style={{ background: visual.gradient }}>
-        {/* Image if available */}
-        {business.imageUrls.length > 0 && (
+        {business.videoUrl ? (
+          <video
+            src={business.videoUrl}
+            controls
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : business.imageUrls.length > 0 ? (
           <Image
             src={business.imageUrls[0]}
             alt={business.title}
@@ -184,10 +195,7 @@ export default async function BusinessProfilePage({
             className="object-cover"
             priority
           />
-        )}
-
-        {/* Centre emoji (shown when no image) */}
-        {business.imageUrls.length === 0 && (
+        ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <div
               className="text-7xl sm:text-8xl select-none"
@@ -338,6 +346,27 @@ export default async function BusinessProfilePage({
               </div>
             </section>
 
+            {/* ── Photo gallery (when video is hero or multiple photos) ── */}
+            {(() => {
+              const photos = business.videoUrl ? business.imageUrls : business.imageUrls.slice(1)
+              if (photos.length === 0) return null
+              return (
+                <section
+                  className="rounded-3xl p-6 sm:p-8 mb-6"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+                >
+                  <h2 className="font-display font-bold text-lg text-foreground mb-4">Photos</h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {photos.map((src, i) => (
+                      <div key={i} className="relative aspect-[4/3] rounded-2xl overflow-hidden">
+                        <Image src={src} alt={`${business.title} photo ${i + 1}`} fill className="object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )
+            })()}
+
             {/* ── Highlights ────────────────────────────────────── */}
             {business.highlights.length > 0 && (
               <section
@@ -389,6 +418,10 @@ export default async function BusinessProfilePage({
                 <DetailRow icon="📍" label="City" value={business.city} />
                 <DetailRow icon="🎯" label="Opportunity" value={typeCfg.label} />
                 <DetailRow icon="📶" label="Business Stage" value={stageCfg.label} />
+                <DetailRow icon="📋" label="Registration" value={business.isRegistered ? 'Legally registered' : 'Not registered'} />
+                {business.seekingOperator && (
+                  <DetailRow icon="👔" label="Leadership" value="Seeking a skilled operator / CEO" />
+                )}
               </div>
 
               {/* Financial disclaimer */}

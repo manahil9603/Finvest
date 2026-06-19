@@ -24,6 +24,7 @@ function paramsToFilters(sp: URLSearchParams): FilterState {
     minRevenue:     sp.get('minRevenue')     ? Number(sp.get('minRevenue'))     : 0,
     maxRevenue:     sp.get('maxRevenue')     ? Number(sp.get('maxRevenue'))     : 0,
     verifiedOnly:   sp.get('verifiedOnly')   === 'true',
+    seekingOperator: sp.get('seekingOperator') === 'true',
     minTrustScore:  sp.get('minTrustScore')  ? Number(sp.get('minTrustScore'))  : 0,
     sortBy:         (sp.get('sortBy')        ?? 'featured') as FilterState['sortBy'],
     page:           sp.get('page')           ? Math.max(1, Number(sp.get('page'))) : 1,
@@ -42,6 +43,7 @@ function filtersToParams(f: FilterState): string {
   if (f.minRevenue)     sp.set('minRevenue',     String(f.minRevenue))
   if (f.maxRevenue)     sp.set('maxRevenue',     String(f.maxRevenue))
   if (f.verifiedOnly)   sp.set('verifiedOnly',   'true')
+  if (f.seekingOperator) sp.set('seekingOperator', 'true')
   if (f.minTrustScore)  sp.set('minTrustScore',  String(f.minTrustScore))
   if (f.sortBy !== 'featured') sp.set('sortBy',  f.sortBy)
   if (f.page > 1)       sp.set('page',           String(f.page))
@@ -58,6 +60,7 @@ function countActiveFilters(f: FilterState): number {
   if (f.minAskingPrice || f.maxAskingPrice) n++
   if (f.minRevenue     || f.maxRevenue)     n++
   if (f.verifiedOnly)   n++
+  if (f.seekingOperator) n++
   if (f.minTrustScore)  n++
   if (f.sortBy !== 'featured') n++
   return n

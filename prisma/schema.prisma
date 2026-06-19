@@ -20,6 +20,7 @@ enum Role {
   BUSINESS_OWNER
   INVESTOR
   BUYER
+  BUSINESS_EXPERT
   ADMIN
 }
 
@@ -114,6 +115,7 @@ model User {
   businesses Business[]
 
   investorProfile InvestorProfile?
+  expertProfile   BusinessExpertProfile?
 
   sentConnections     ConnectionRequest[] @relation("SentConnections")
   receivedConnections ConnectionRequest[] @relation("ReceivedConnections")
@@ -123,28 +125,11 @@ model User {
 
   savedBusinesses SavedBusiness[]
 
-  passwordResetTokens PasswordResetToken[]
-
   @@index([email])
   @@index([role])
   @@index([active])
   @@index([province, city])
   @@map("users")
-}
-
-model PasswordResetToken {
-  id        String    @id @default(uuid()) @db.Uuid
-  userId    String    @db.Uuid
-  tokenHash String    @unique @db.VarChar(64)
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([expiresAt])
-  @@map("password_reset_tokens")
 }
 
 model Business {
@@ -165,9 +150,15 @@ model Business {
   established Int?
   highlights  String[]
   imageUrls   String[]
+  videoUrl    String?  @db.Text
 
   featured Boolean        @default(false)
   status   BusinessStatus @default(ACTIVE)
+
+  /// Whether the business is legally registered with relevant authorities.
+  isRegistered    Boolean @default(false)
+  /// Owner is looking for a skilled operator / CEO to run the business.
+  seekingOperator Boolean @default(false)
 
   ownerId String @db.Uuid
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
@@ -185,8 +176,27 @@ model Business {
   @@index([listingType, status])
   @@index([province, city, status])
   @@index([featured, status])
+  @@index([seekingOperator, status])
   @@index([createdAt(sort: Desc)])
   @@map("businesses")
+}
+
+model BusinessExpertProfile {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @unique @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  yearsExperience     Int?
+  skills              String[]
+  preferredIndustries Industry[]
+  expertSummary       String?  @db.Text
+  available           Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("business_expert_profiles")
 }
 
 model InvestorProfile {

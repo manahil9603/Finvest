@@ -7,7 +7,6 @@ import { sanitizeShort } from '@/lib/sanitize'
 import { getRoleRedirect } from '@/lib/constants'
 import { rateLimit, rateLimitResponse, getClientIp, AUTH_LIMIT } from '@/lib/rateLimit'
 import { handleCors, addCorsHeaders } from '@/lib/cors'
-import { isEmailConfigured, sendAccountCreatedEmail } from '@/lib/email'
 
 const BCRYPT_ROUNDS = 12   // OWASP minimum is 10; 12 gives ~250 ms hashing time
 
@@ -43,7 +42,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const { name, email, password, role, phone, city } = parsed.data
+    const { name, email, password, role, phone, city, yearsExperience, skills, expertSummary } = parsed.data
 
     // ── Sanitize free-text inputs ────────────────────────────────────────────
     const safeName  = sanitizeShort(name, 80)
@@ -63,13 +62,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    if (!isEmailConfigured()) {
-      return NextResponse.json(
-        { error: 'Registration is temporarily unavailable. Please try again later.' },
-        { status: 503 }
-      )
-    }
-
     // ── Hash password ────────────────────────────────────────────────────────
     const hashed = await bcrypt.hash(password, BCRYPT_ROUNDS)
 
@@ -82,28 +74,20 @@ export async function POST(req: NextRequest) {
         role,
         phone: safePhone,
         city:  safeCity,
+        ...(role === 'BUSINESS_EXPERT' && {
+          expertProfile: {
+            create: {
+              yearsExperience: yearsExperience ?? null,
+              skills: skills
+                ? skills.split(',').map((s) => sanitizeShort(s.trim(), 80)).filter(Boolean).slice(0, 12)
+                : [],
+              expertSummary: expertSummary ? sanitizeShort(expertSummary, 1000) : null,
+            },
+          },
+        }),
       },
       select: { id: true, name: true, email: true, role: true },
     })
-
-    // ── Welcome email must succeed or account is rolled back ─────────────────
-    try {
-      await sendAccountCreatedEmail({
-        to:   user.email,
-        name: user.name,
-        role: user.role,
-      })
-    } catch (err) {
-      console.error('[POST /api/auth/register] welcome email:', err)
-      await prisma.user.delete({ where: { id: user.id } }).catch(() => {})
-      return NextResponse.json(
-        {
-          error: 'We could not send a confirmation email to that address. Check the email and try again.',
-          field: 'email',
-        },
-        { status: 422 }
-      )
-    }
 
     // ── Issue JWT ────────────────────────────────────────────────────────────
     const token    = signToken({ userId: user.id, email: user.email, role: user.role })

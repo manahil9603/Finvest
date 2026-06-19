@@ -47,6 +47,8 @@ export async function GET(req: NextRequest) {
     const minRev        = sp.get('minRevenue')     ? Number(sp.get('minRevenue'))     : null
     const maxRev        = sp.get('maxRevenue')     ? Number(sp.get('maxRevenue'))     : null
     const verifiedOnly  = sp.get('verifiedOnly') === 'true'
+    const seekingOperator = sp.get('seekingOperator') === 'true'
+    const isRegistered  = sp.get('isRegistered') === 'true'
     const minTrust      = sp.get('minTrustScore') ? Number(sp.get('minTrustScore'))  : 0
     const sortBy        = sp.get('sortBy') || 'featured'
     const page          = Math.max(1, parseInt(sp.get('page') || '1'))
@@ -70,6 +72,8 @@ export async function GET(req: NextRequest) {
     if (minRev)      where.revenue     = { ...(where.revenue     as object ?? {}), gte: minRev }
     if (maxRev)      where.revenue     = { ...(where.revenue     as object ?? {}), lte: maxRev }
     if (verifiedOnly) where.owner      = { verified: true }
+    if (seekingOperator) where.seekingOperator = true
+    if (isRegistered)    where.isRegistered    = true
 
     // ── Sort ─────────────────────────────────────────────────
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

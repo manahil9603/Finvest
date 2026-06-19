@@ -110,24 +110,6 @@ export function Hero({ isLoggedIn }: HeroProps) {
         initial="hidden"
         animate="show"
       >
-        {/* Badge */}
-        <motion.div variants={item} className="flex justify-center mb-8">
-          <div
-            className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full text-sm font-medium"
-            style={{
-              background: 'rgba(139,92,246,0.12)',
-              border: '1px solid rgba(139,92,246,0.28)',
-              color: '#A78BFA',
-            }}
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-purple opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-purple" />
-            </span>
-            🇵🇰&nbsp; Now live across all 7 provinces of Pakistan
-          </div>
-        </motion.div>
-
         {/* Headline */}
         <motion.h1
           variants={item}
@@ -180,7 +162,7 @@ export function Hero({ isLoggedIn }: HeroProps) {
           </Link>
 
           <Link
-            href="/explore"
+            href={isLoggedIn ? '/explore' : '/login'}
             className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl font-semibold text-base text-foreground transition-all duration-200 hover:-translate-y-0.5 hover:border-white/20 w-full xs:w-auto justify-center"
             style={{
               background: 'rgba(255,255,255,0.06)',

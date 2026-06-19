@@ -77,15 +77,24 @@ export const ROLE_META = {
     redirect: '/dashboard/buyer',
     color:    'blue',
   },
+  BUSINESS_EXPERT: {
+    label:    'Business Expert',
+    emoji:    '🎯',
+    tagline:  'Run and grow someone else\'s business',
+    desc:     'Offer your operational and leadership skills to owners who need a skilled CEO or operator.',
+    redirect: '/dashboard/expert',
+    color:    'purple',
+  },
 } as const
 
 export type AppRole = keyof typeof ROLE_META
 
 export const ROLE_REDIRECTS: Record<string, string> = {
-  BUSINESS_OWNER: '/dashboard/business',
-  INVESTOR:       '/dashboard/investor',
-  BUYER:          '/dashboard/buyer',
-  ADMIN:          '/admin',
+  BUSINESS_OWNER:  '/dashboard/business',
+  INVESTOR:        '/dashboard/investor',
+  BUYER:           '/dashboard/buyer',
+  BUSINESS_EXPERT: '/dashboard/expert',
+  ADMIN:           '/admin',
 }
 
 export function getRoleRedirect(role: string): string {

@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, FormEvent, useCallback } from 'react'
+import { Suspense, useState, FormEvent, useCallback } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { CITIES_BY_PROVINCE, ROLE_META, AppRole } from '@/lib/constants'
 import { getPasswordStrength } from '@/lib/validation'
+import { safeInternalRedirect } from '@/lib/utils'
 import { Disclaimer } from '@/components/layout/Disclaimer'
 import { useLoading } from '@/hooks/useLoading'
 
@@ -17,6 +18,9 @@ interface FormData {
   confirmPassword: string
   phone:           string
   city:            string
+  yearsExperience: string
+  skills:          string
+  expertSummary:   string
 }
 
 interface FieldErrors {
@@ -26,6 +30,9 @@ interface FieldErrors {
   confirmPassword?: string
   phone?:           string
   city?:            string
+  yearsExperience?: string
+  skills?:          string
+  expertSummary?:   string
   general?:         string
 }
 
@@ -98,12 +105,13 @@ function PasswordStrengthBar({ password }: { password: string }) {
 
 // ── Step 1 — Role selection ───────────────────────────────────────────────────
 
-const ROLES: AppRole[] = ['BUSINESS_OWNER', 'INVESTOR', 'BUYER']
+const ROLES: AppRole[] = ['BUSINESS_OWNER', 'INVESTOR', 'BUYER', 'BUSINESS_EXPERT']
 
 const ROLE_COLORS: Record<AppRole, { border: string; bg: string; glow: string; dot: string }> = {
-  BUSINESS_OWNER: { border: '#D97706', bg: 'rgba(217,119,6,0.08)',    glow: 'rgba(217,119,6,0.2)',    dot: '#D97706' },
-  INVESTOR:       { border: '#10B981', bg: 'rgba(16,185,129,0.08)',   glow: 'rgba(16,185,129,0.2)',   dot: '#10B981' },
-  BUYER:          { border: '#3B82F6', bg: 'rgba(59,130,246,0.08)',   glow: 'rgba(59,130,246,0.2)',   dot: '#3B82F6' },
+  BUSINESS_OWNER:  { border: '#D97706', bg: 'rgba(217,119,6,0.08)',    glow: 'rgba(217,119,6,0.2)',    dot: '#D97706' },
+  INVESTOR:        { border: '#10B981', bg: 'rgba(16,185,129,0.08)',   glow: 'rgba(16,185,129,0.2)',   dot: '#10B981' },
+  BUYER:           { border: '#3B82F6', bg: 'rgba(59,130,246,0.08)',   glow: 'rgba(59,130,246,0.2)',   dot: '#3B82F6' },
+  BUSINESS_EXPERT: { border: '#8B5CF6', bg: 'rgba(139,92,246,0.08)',   glow: 'rgba(139,92,246,0.2)',   dot: '#8B5CF6' },
 }
 
 function RoleStep({
@@ -393,6 +401,25 @@ function DetailsStep({
           )}
         </div>
 
+        {role === 'BUSINESS_EXPERT' && (
+          <div className="rounded-2xl p-5 space-y-4"
+               style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }}>
+            <div>
+              <p className="text-sm font-semibold text-foreground mb-1">Your business expertise</p>
+              <p className="text-xs text-fg-3">Tell owners why you can run their business as an operator or CEO.</p>
+            </div>
+            <SignupField id="yearsExperience" label="Years of business experience *" type="number"
+                   placeholder="e.g. 8" value={form.yearsExperience} error={errors.yearsExperience}
+                   loading={loading} onChange={onChange} />
+            <SignupField id="skills" label="Business skills *" placeholder="Operations, sales, finance, team leadership…"
+                   value={form.skills} error={errors.skills}
+                   hint="Comma-separated skills you bring as an operator." loading={loading} onChange={onChange} />
+            <SignupField id="expertSummary" label="Professional summary" required={false}
+                   placeholder="Brief overview of businesses you have run or scaled…"
+                   value={form.expertSummary} error={errors.expertSummary} loading={loading} onChange={onChange} />
+          </div>
+        )}
+
         {/* Legal disclaimer */}
         <div className="rounded-2xl p-4 text-xs leading-relaxed"
              style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.18)', color: 'rgba(253,186,116,0.8)' }}>
@@ -436,7 +463,17 @@ function DetailsStep({
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="min-h-dvh bg-background" />}>
+      <SignupContent />
+    </Suspense>
+  )
+}
+
+function SignupContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectTo = safeInternalRedirect(searchParams.get('redirect'))
   const { startLoading, stopLoading } = useLoading()
 
   const [step,    setStep]    = useState<1 | 2>(1)
@@ -451,6 +488,9 @@ export default function SignupPage() {
     confirmPassword: '',
     phone:           '',
     city:            '',
+    yearsExperience: '',
+    skills:          '',
+    expertSummary:   '',
   })
 
   const handleChange = useCallback((field: keyof FormData, value: string) => {
@@ -472,6 +512,15 @@ export default function SignupPage() {
     if (!form.city)                                              e.city = 'Please select your city.'
     if (form.phone && !/^(\+92|0)[0-9]{10}$/.test(form.phone.replace(/[\s-]/g, ''))) {
       e.phone = 'Enter a valid Pakistani number (+923001234567).'
+    }
+    if (role === 'BUSINESS_EXPERT') {
+      const years = Number(form.yearsExperience)
+      if (!form.yearsExperience || Number.isNaN(years) || years < 1) {
+        e.yearsExperience = 'Enter at least 1 year of business experience.'
+      }
+      if (!form.skills.trim() || form.skills.trim().length < 5) {
+        e.skills = 'Describe your business skills (at least 5 characters).'
+      }
     }
 
     setErrors(e)
@@ -499,6 +548,11 @@ export default function SignupPage() {
           role,
           phone:           form.phone.replace(/[\s-]/g, '') || undefined,
           city:            form.city,
+          ...(role === 'BUSINESS_EXPERT' && {
+            yearsExperience: Number(form.yearsExperience),
+            skills:          form.skills.trim(),
+            expertSummary:   form.expertSummary.trim() || undefined,
+          }),
         }),
       })
       const data = await res.json()
@@ -514,7 +568,7 @@ export default function SignupPage() {
       }
 
       navigating = true
-      router.push(data.redirect ?? '/dashboard/business')
+      router.push(redirectTo ?? data.redirect ?? '/dashboard/business')
       router.refresh()
     } catch {
       setErrors({ general: 'Network error — please try again.' })
@@ -605,7 +659,11 @@ export default function SignupPage() {
         {/* Sign-in link */}
         <p className="mt-6 text-sm text-fg-2">
           Already have an account?{' '}
-          <Link href="/login" className="font-semibold transition-colors" style={{ color: 'rgb(139,92,246)' }}>
+          <Link
+            href={redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : '/login'}
+            className="font-semibold transition-colors"
+            style={{ color: 'rgb(139,92,246)' }}
+          >
             Sign in
           </Link>
         </p>

@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { formatPKR, INDUSTRY_LABELS, PROVINCE_LABELS, timeAgo } from '@/lib/utils'
+import { formatPKR, INDUSTRY_LABELS, PROVINCE_LABELS, timeAgo, businessDetailHref } from '@/lib/utils'
 import { getTrustMeta } from '@/lib/trust'
 import { useToast } from '@/hooks/useToast'
 import { INDUSTRY_VISUAL } from './types'
@@ -127,6 +127,8 @@ export function BusinessCard({ business: b, currentUserId, className = '' }: Bus
   const typeStyle = TYPE_STYLES[b.listingType]  ?? TYPE_STYLES.INVESTMENT
   const stageStyle= STAGE_STYLES[b.stage]       ?? STAGE_STYLES.IDEA
   const isOwn     = !!currentUserId && currentUserId === b.ownerId
+  const isLoggedIn = !!currentUserId
+  const detailHref = businessDetailHref(b.id, isLoggedIn)
 
   return (
     <div
@@ -155,6 +157,25 @@ export function BusinessCard({ business: b, currentUserId, className = '' }: Bus
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
           />
+        ) : b.videoUrl ? (
+          <>
+            <video
+              src={b.videoUrl}
+              muted
+              playsInline
+              preload="metadata"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <span
+                className="w-11 h-11 rounded-full flex items-center justify-center text-white text-lg pl-0.5"
+                style={{ background: 'rgba(0,0,0,0.55)', border: '1px solid rgba(255,255,255,0.25)' }}
+                aria-hidden="true"
+              >
+                ▶
+              </span>
+            </div>
+          </>
         ) : (
           /* Gradient placeholder with industry emoji */
           <div className="absolute inset-0 flex items-center justify-center">
@@ -212,6 +233,22 @@ export function BusinessCard({ business: b, currentUserId, className = '' }: Bus
           >
             {STAGE_LABELS[b.stage] ?? b.stage}
           </span>
+          {b.isRegistered && (
+            <span
+              className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
+              style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399', border: '1px solid rgba(16,185,129,0.25)' }}
+            >
+              Registered
+            </span>
+          )}
+          {b.seekingOperator && (
+            <span
+              className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
+              style={{ background: 'rgba(139,92,246,0.12)', color: '#C4B5FD', border: '1px solid rgba(139,92,246,0.25)' }}
+            >
+              Seeking CEO
+            </span>
+          )}
         </div>
 
         {/* Title */}
@@ -301,7 +338,7 @@ export function BusinessCard({ business: b, currentUserId, className = '' }: Bus
             <SaveButton businessId={b.id} isSaved={b.isSaved} disabled={isOwn} />
 
             <Link
-              href={`/businesses/${b.id}`}
+              href={detailHref}
               onClick={(e) => e.stopPropagation()}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-white transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5"
               style={{ background: 'linear-gradient(135deg, #6B21A8, #8B5CF6)' }}

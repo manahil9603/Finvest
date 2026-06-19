@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/useToast'
 // ─────────────────────────────────────────────────────────────
 
 type ConnectionStatus = 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED'
-type UserRole         = 'BUSINESS_OWNER' | 'INVESTOR' | 'BUYER' | 'ADMIN' | null
+type UserRole         = 'BUSINESS_OWNER' | 'INVESTOR' | 'BUYER' | 'BUSINESS_EXPERT' | 'ADMIN' | null
 
 interface ConnectDialogProps {
   businessId:    string

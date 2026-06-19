@@ -66,9 +66,6 @@ cp .env.example .env.local
 | `NODE_ENV` | Optional | `development` / `production` |
 | `PORT` | Optional | Next.js port (default: `3000`) |
 | `SOCKET_PORT` | Optional | Legacy compatibility only; Socket.io now runs on `PORT` |
-| `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS` | Optional | SMTP for signup welcome emails (see `.env.example`) |
-| `SMTP_PORT`, `SMTP_SECURE` | Optional | SMTP port (default `587`) and TLS (`true` for port 465) |
-| `EMAIL_FROM` | Optional | Sender address, e.g. `Finvest <noreply@yourdomain.com>` |
 
 ### Generate a secure JWT_SECRET
 
@@ -269,10 +266,8 @@ Auth endpoints set an httpOnly cookie (`finvest_token`).
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| POST | `/api/auth/register` | — | Create account (requires welcome email). Rate: 5/15min per IP |
+| POST | `/api/auth/register` | — | Create account. Rate: 5/15min per IP |
 | POST | `/api/auth/login` | — | Sign in. Rate: 5/15min per IP + per email |
-| POST | `/api/auth/forgot-password` | — | Send password reset link. Rate: 5/15min per IP + per email |
-| POST | `/api/auth/reset-password` | — | Set new password with token from email |
 | POST | `/api/auth/logout` | — | Clear auth cookie |
 | GET | `/api/auth/me` | ✅ | Current user profile |
 

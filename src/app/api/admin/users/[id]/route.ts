@@ -6,7 +6,7 @@ import { getAuthUserFromRequest } from '@/lib/auth'
 const patchSchema = z.object({
   active:   z.boolean().optional(),
   verified: z.boolean().optional(),
-  role:     z.enum(['BUSINESS_OWNER', 'INVESTOR', 'BUYER', 'ADMIN']).optional(),
+  role:     z.enum(['BUSINESS_OWNER', 'INVESTOR', 'BUYER', 'BUSINESS_EXPERT', 'ADMIN']).optional(),
 })
 
 /** PUT /api/admin/users/:id — suspend/unsuspend, verify, change role */

@@ -1,17 +1,18 @@
 import Link from 'next/link'
-import { formatPKR, INDUSTRY_LABELS, timeAgo } from '@/lib/utils'
+import { formatPKR, INDUSTRY_LABELS, timeAgo, businessDetailHref } from '@/lib/utils'
 import { TypeBadge, StageBadge, Badge } from '@/components/ui/Badge'
 import type { Business } from '@/types'
 
 interface ListingCardProps {
   listing: Business
   compact?: boolean
+  isLoggedIn?: boolean
 }
 
-export function ListingCard({ listing, compact }: ListingCardProps) {
+export function ListingCard({ listing, compact, isLoggedIn = false }: ListingCardProps) {
   return (
     <Link
-      href={`/businesses/${listing.id}`}
+      href={businessDetailHref(listing.id, isLoggedIn)}
       className="card card-lift flex flex-col group overflow-hidden noPad"
       style={{ padding: 0 }}
     >
